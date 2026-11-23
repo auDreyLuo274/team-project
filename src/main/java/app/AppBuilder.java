@@ -12,7 +12,8 @@ import javax.swing.WindowConstants;
 
 import data_access.FileApplicationDataAccessObject;
 import data_access.FilePetDataAccessObject;
-import data_access.InMemoryPetDataAccess;
+import data_access.PetCatalog;
+import data_access.SamplePetSeeder;
 import interface_adapter.SwitchViewController;
 import interface_adapter.ApplicationNavigator;
 import interface_adapter.ViewManagerModel;
@@ -53,6 +54,27 @@ public final class AppBuilder {
     private final ViewManagerModel viewManagerModel = new ViewManagerModel();
     private final ViewManager viewManager = new ViewManager(views, cardLayout, viewManagerModel);
     private ApplicationNavigator applicationNavigator;
+    private FilePetDataAccessObject petStore;
+    private PetDetailView petDetailView;
+
+    /**
+     * Returns the one pet store the whole app uses, creating it on first use. It is filled with sample cats the
+     * first time, so a fresh install has something to show. The store keeps pets in memory, so every screen
+     * must share this same instance.
+     */
+    private FilePetDataAccessObject sharedPetStore() {
+        if (petStore == null) {
+            petStore = new FilePetDataAccessObject(Path.of("pets.json"));
+            SamplePetSeeder.seedIfEmpty(petStore);
+        }
+        return petStore;
+    }
+
+    private void connectApplyButton() {
+        if (petDetailView != null && applicationNavigator != null) {
+            petDetailView.setApplyHandler(applicationNavigator::startApplication);
+        }
+    }
 
     /**
      * Adds the pet gallery screen.
@@ -60,16 +82,16 @@ public final class AppBuilder {
      * @return this builder
      */
     public AppBuilder addGalleryView() {
-        final InMemoryPetDataAccess petData = InMemoryPetDataAccess.withSampleData();
+        final PetCatalog petData = new PetCatalog(sharedPetStore());
 
         final PetDetailViewModel detailViewModel = new PetDetailViewModel();
         final ViewPetDetailsPresenter detailsPresenter =
                 new ViewPetDetailsPresenter(detailViewModel, viewManagerModel);
         final ViewPetDetailsController detailsController =
                 new ViewPetDetailsController(new ViewPetDetailsInteractor(petData, detailsPresenter));
-        final PetDetailView detailView = new PetDetailView(
+        petDetailView = new PetDetailView(
                 detailViewModel, new SwitchViewController(viewManagerModel), GalleryView.VIEW_NAME);
-        views.add(detailView, PetDetailViewModel.VIEW_NAME);
+        views.add(petDetailView, PetDetailViewModel.VIEW_NAME);
 
         final GalleryViewModel galleryViewModel = new GalleryViewModel();
         final BrowsePetsPresenter presenter = new BrowsePetsPresenter(galleryViewModel);
@@ -78,6 +100,7 @@ public final class AppBuilder {
         final GalleryView galleryView = new GalleryView(controller, galleryViewModel, detailsController);
         galleryView.loadAll();
         views.add(galleryView, GalleryView.VIEW_NAME);
+        connectApplyButton();
         return this;
     }
 
@@ -91,7 +114,7 @@ public final class AppBuilder {
     public AppBuilder addApplicationViews() {
         final FileApplicationDataAccessObject applicationData =
                 new FileApplicationDataAccessObject("applications.json");
-        final FilePetDataAccessObject petData = new FilePetDataAccessObject(Path.of("pets.json"));
+        final FilePetDataAccessObject petData = sharedPetStore();
 
         final SubmitApplicationViewModel submitViewModel = new SubmitApplicationViewModel();
         final SubmitApplicationView submitView = new SubmitApplicationView(submitViewModel);
@@ -108,6 +131,7 @@ public final class AppBuilder {
         views.add(myApplicationsView, TrackApplicationsViewModel.VIEW_NAME);
 
         applicationNavigator = new ApplicationNavigator(viewManagerModel, submitViewModel, trackViewModel);
+        connectApplyButton();
         return this;
     }
 
