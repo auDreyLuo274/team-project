@@ -35,6 +35,15 @@ public class InMemoryPetDataAccess implements BrowsePetsDataAccessInterface, Vie
      * @return a store with sample data
      */
     public static InMemoryPetDataAccess withSampleData() {
+        return new InMemoryPetDataAccess(sampleCats());
+    }
+
+    /**
+     * Returns a few sample cats.
+     *
+     * @return a new list of sample cats
+     */
+    public static List<Pet> sampleCats() {
         final List<Pet> sample = new ArrayList<>();
         sample.add(sample("1", "Miso", Species.CAT, "Tabby", 2, PetSex.FEMALE,
                 List.of(Temperament.AFFECTIONATE, Temperament.CALM), PetStatus.AVAILABLE));
@@ -46,7 +55,7 @@ public class InMemoryPetDataAccess implements BrowsePetsDataAccessInterface, Vie
                 List.of(Temperament.ENERGETIC), PetStatus.AVAILABLE));
         sample.add(sample("5", "Olive", Species.CAT, "Calico", 3, PetSex.FEMALE,
                 List.of(Temperament.PLAYFUL), PetStatus.ADOPTED));
-        return new InMemoryPetDataAccess(sample);
+        return sample;
     }
 
     private static Pet sample(String id, String name, Species species, String breed, int age, PetSex sex,
