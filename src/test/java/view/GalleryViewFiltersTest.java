@@ -18,7 +18,8 @@ import interface_adapter.ViewManagerModel;
 import interface_adapter.browse_pets.BrowsePetsController;
 import interface_adapter.browse_pets.BrowsePetsPresenter;
 import interface_adapter.browse_pets.GalleryViewModel;
-import interface_adapter.browse_pets.SexFilterOption;
+import interface_adapter.browse_pets.FilterSpec;
+import interface_adapter.browse_pets.FilterSpecs;
 import interface_adapter.view_pet_details.ViewPetDetailsController;
 import interface_adapter.view_pet_details.ViewPetDetailsPresenter;
 import interface_adapter.view_pet_details.PetDetailViewModel;
@@ -31,11 +32,12 @@ class GalleryViewFiltersTest {
     private GalleryView buildView() {
         final InMemoryPetDataAccess data = new InMemoryPetDataAccess(StarterPetCatalog.createPets());
         final GalleryViewModel viewModel = new GalleryViewModel();
+        final java.util.List<FilterSpec> specs = FilterSpecs.loadRegistered();
         final BrowsePetsController controller = new BrowsePetsController(
-                new BrowsePetsInteractor(data, new BrowsePetsPresenter(viewModel)));
+                new BrowsePetsInteractor(data, new BrowsePetsPresenter(viewModel)), specs);
         final ViewPetDetailsController details = new ViewPetDetailsController(new ViewPetDetailsInteractor(data,
                 new ViewPetDetailsPresenter(new PetDetailViewModel(), new ViewManagerModel())));
-        return new GalleryView(controller, viewModel, details);
+        return new GalleryView(controller, viewModel, details, specs);
     }
 
     private <T extends java.awt.Component> List<T> all(java.awt.Container container, Class<T> type) {
@@ -60,12 +62,22 @@ class GalleryViewFiltersTest {
                 .findFirst().orElseThrow();
     }
 
+    private void choose(JComboBox<?> box, String label) {
+        for (int i = 0; i < box.getItemCount(); i++) {
+            if (box.getItemAt(i).toString().equals(label)) {
+                box.setSelectedIndex(i);
+                return;
+            }
+        }
+        throw new AssertionError("No option " + label);
+    }
+
     @Test
     void sexBoxNarrowsTheCards() {
         view.loadAll();
         final int all = cardCount();
 
-        filter(JComboBox.class, "Sex filter").setSelectedItem(SexFilterOption.MALE);
+        choose(filter(JComboBox.class, "Sex filter"), "Male");
 
         assertEquals(0, cardCount());
         assertEquals(1, all);
@@ -85,10 +97,10 @@ class GalleryViewFiltersTest {
     @Test
     void clearFiltersBringsEveryCatBack() {
         view.loadAll();
-        filter(JComboBox.class, "Sex filter").setSelectedItem(SexFilterOption.MALE);
+        choose(filter(JComboBox.class, "Sex filter"), "Male");
         filter(JTextField.class, "Breed filter").setText("siam");
         filter(JTextField.class, "Color filter").setText("black");
-        filter(JComboBox.class, "Hair length filter").setSelectedItem("Long");
+        choose(filter(JComboBox.class, "Hair length filter"), "Long");
 
         all(view, JButton.class).stream().filter(b -> b.getText().equals("Clear filters"))
                 .findFirst().orElseThrow().doClick();
@@ -103,9 +115,9 @@ class GalleryViewFiltersTest {
 
         filter(JTextField.class, "Color filter").setText("CHOCOLATE");
         final JComboBox<?> hair = filter(JComboBox.class, "Hair length filter");
-        hair.setSelectedItem("Long");
+        choose(hair, "Long");
         assertEquals(0, cardCount());
-        hair.setSelectedItem("Short");
+        choose(hair, "Short");
         assertEquals(1, cardCount());
     }
 }

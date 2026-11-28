@@ -11,12 +11,17 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Supplier;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -27,13 +32,12 @@ import javax.swing.ScrollPaneConstants;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
-import interface_adapter.browse_pets.AgeFilterOption;
-import interface_adapter.browse_pets.BrowseChoices;
 import interface_adapter.browse_pets.BrowsePetsController;
+import interface_adapter.browse_pets.FilterOption;
+import interface_adapter.browse_pets.FilterSpec;
 import interface_adapter.browse_pets.GalleryViewModel;
 import interface_adapter.browse_pets.GalleryViewModelListener;
 import interface_adapter.browse_pets.PetCardData;
-import interface_adapter.browse_pets.SexFilterOption;
 import interface_adapter.view_pet_details.ViewPetDetailsController;
 
 /**
@@ -54,12 +58,9 @@ public class GalleryView extends JPanel implements GalleryViewModelListener {
     private final GalleryViewModel viewModel;
     private final ViewPetDetailsController detailsController;
     private final JPanel cardGrid = new JPanel(new GridLayout(0, COLUMNS, GAP, GAP));
-    private final JComboBox<AgeFilterOption> ageBox = new JComboBox<>(AgeFilterOption.values());
-    private final JComboBox<SexFilterOption> sexBox = new JComboBox<>(SexFilterOption.values());
-    private final JTextField breedField = new JTextField(12);
-    private final JTextField colorField = new JTextField(12);
-    private final JComboBox<String> hairLengthBox =
-            new JComboBox<>(new String[]{"Any length", "Short", "Medium", "Long", "Hairless"});
+    private final List<FilterSpec> specs;
+    private final Map<String, Supplier<List<String>>> readers = new LinkedHashMap<>();
+    private final List<Runnable> resetters = new ArrayList<>();
     private boolean updating;
     private int columns = COLUMNS;
     private boolean showingCards;
@@ -70,10 +71,12 @@ public class GalleryView extends JPanel implements GalleryViewModelListener {
      * @param controller starts the browse use case when a filter changes
      * @param viewModel the model whose cards this view draws
      * @param detailsController opens the detail page when a card is chosen
+     * @param specs the filters to offer, one control each
      */
     public GalleryView(BrowsePetsController controller, GalleryViewModel viewModel,
-                       ViewPetDetailsController detailsController) {
+                       ViewPetDetailsController detailsController, List<FilterSpec> specs) {
         super(new BorderLayout());
+        this.specs = List.copyOf(specs);
         this.controller = controller;
         this.detailsController = detailsController;
         this.viewModel = viewModel;
@@ -126,15 +129,55 @@ public class GalleryView extends JPanel implements GalleryViewModelListener {
         panel.setBorder(BorderFactory.createEmptyBorder(GAP, GAP, GAP, GAP));
         panel.getAccessibleContext().setAccessibleName("Filters");
 
-        addFilter(panel, "Breed", KeyEvent.VK_B, breedField);
-        addFilter(panel, "Age", KeyEvent.VK_A, ageBox);
-        addFilter(panel, "Sex", KeyEvent.VK_S, sexBox);
-        addFilter(panel, "Color", KeyEvent.VK_O, colorField);
-        addFilter(panel, "Hair length", KeyEvent.VK_H, hairLengthBox);
-        ageBox.addActionListener(event -> applyFilters());
-        sexBox.addActionListener(event -> applyFilters());
-        hairLengthBox.addActionListener(event -> applyFilters());
-        final DocumentListener textFilterListener = new DocumentListener() {
+        // Every control is built from a FilterSpec, so a new filter needs no change here.
+        for (FilterSpec spec : specs) {
+            final JLabel heading = new JLabel(spec.getLabel());
+            if (spec.getMnemonic() != 0) {
+                heading.setDisplayedMnemonic(spec.getMnemonic());
+            }
+            panel.add(heading);
+            switch (spec.getControl()) {
+                case SINGLE_CHOICE:
+                    addChoiceBox(panel, spec, heading);
+                    break;
+                case MULTI_CHOICE:
+                    addTickBoxes(panel, spec);
+                    break;
+                default:
+                    addTextBox(panel, spec, heading);
+                    break;
+            }
+            panel.add(Box.createVerticalStrut(GAP));
+        }
+
+        final JButton clearButton = new JButton("Clear filters");
+        clearButton.setMnemonic(KeyEvent.VK_C);
+        clearButton.getAccessibleContext().setAccessibleName("Clear filters");
+        clearButton.addActionListener(event -> clearFilters());
+        panel.add(clearButton);
+        for (Component component : panel.getComponents()) {
+            ((JComponent) component).setAlignmentX(Component.LEFT_ALIGNMENT);
+        }
+        return panel;
+    }
+
+    private void addChoiceBox(JPanel panel, FilterSpec spec, JLabel heading) {
+        final JComboBox<FilterOption> box = new JComboBox<>(spec.getOptions().toArray(new FilterOption[0]));
+        heading.setLabelFor(box);
+        box.getAccessibleContext().setAccessibleName(spec.getLabel() + " filter");
+        box.setMaximumSize(new Dimension(Integer.MAX_VALUE, box.getPreferredSize().height));
+        box.addActionListener(event -> applyFilters());
+        readers.put(spec.getId(), () -> List.of(((FilterOption) box.getSelectedItem()).getId()));
+        resetters.add(() -> box.setSelectedIndex(0));
+        panel.add(box);
+    }
+
+    private void addTextBox(JPanel panel, FilterSpec spec, JLabel heading) {
+        final JTextField field = new JTextField(12);
+        heading.setLabelFor(field);
+        field.getAccessibleContext().setAccessibleName(spec.getLabel() + " filter");
+        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, field.getPreferredSize().height));
+        field.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent event) {
                 applyFilters();
@@ -149,54 +192,47 @@ public class GalleryView extends JPanel implements GalleryViewModelListener {
             public void changedUpdate(DocumentEvent event) {
                 applyFilters();
             }
-        };
-        breedField.getDocument().addDocumentListener(textFilterListener);
-        colorField.getDocument().addDocumentListener(textFilterListener);
-
-        final JButton clearButton = new JButton("Clear filters");
-        clearButton.setMnemonic(KeyEvent.VK_C);
-        clearButton.getAccessibleContext().setAccessibleName("Clear filters");
-        clearButton.addActionListener(event -> clearFilters());
-        panel.add(clearButton);
-        for (Component component : panel.getComponents()) {
-            ((JComponent) component).setAlignmentX(Component.LEFT_ALIGNMENT);
-        }
-        return panel;
+        });
+        readers.put(spec.getId(), () -> List.of(field.getText()));
+        resetters.add(() -> field.setText(""));
+        panel.add(field);
     }
 
-    private static void addFilter(JPanel panel, String name, int mnemonic, JComponent control) {
-        final JLabel label = new JLabel(name);
-        label.setLabelFor(control);
-        label.setDisplayedMnemonic(mnemonic);
-        control.getAccessibleContext().setAccessibleName(name + " filter");
-        control.setMaximumSize(new Dimension(Integer.MAX_VALUE, control.getPreferredSize().height));
-        panel.add(label);
-        panel.add(control);
-        panel.add(Box.createVerticalStrut(GAP));
+    private void addTickBoxes(JPanel panel, FilterSpec spec) {
+        final Map<String, JCheckBox> boxes = new LinkedHashMap<>();
+        for (FilterOption option : spec.getOptions()) {
+            final JCheckBox box = new JCheckBox(option.getLabel());
+            box.getAccessibleContext().setAccessibleName(spec.getLabel() + ": " + option.getLabel());
+            box.addActionListener(event -> applyFilters());
+            boxes.put(option.getId(), box);
+            panel.add(box);
+        }
+        readers.put(spec.getId(), () -> {
+            final List<String> chosen = new ArrayList<>();
+            for (Map.Entry<String, JCheckBox> entry : boxes.entrySet()) {
+                if (entry.getValue().isSelected()) {
+                    chosen.add(entry.getKey());
+                }
+            }
+            return chosen;
+        });
+        resetters.add(() -> boxes.values().forEach(box -> box.setSelected(false)));
     }
 
     private void applyFilters() {
         if (updating) {
             return;
         }
-        final BrowseChoices choices = new BrowseChoices();
-        choices.setAge((AgeFilterOption) ageBox.getSelectedItem());
-        choices.setSex((SexFilterOption) sexBox.getSelectedItem());
-        choices.setBreed(breedField.getText());
-        choices.setColor(colorField.getText());
-        if (hairLengthBox.getSelectedIndex() > 0) {
-            choices.setHairLength((String) hairLengthBox.getSelectedItem());
+        final Map<String, List<String>> choices = new LinkedHashMap<>();
+        for (Map.Entry<String, Supplier<List<String>>> entry : readers.entrySet()) {
+            choices.put(entry.getKey(), entry.getValue().get());
         }
         controller.browse(choices);
     }
 
     private void clearFilters() {
         updating = true;
-        ageBox.setSelectedItem(AgeFilterOption.ANY);
-        sexBox.setSelectedItem(SexFilterOption.ANY);
-        breedField.setText("");
-        colorField.setText("");
-        hairLengthBox.setSelectedIndex(0);
+        resetters.forEach(Runnable::run);
         updating = false;
         applyFilters();
     }
