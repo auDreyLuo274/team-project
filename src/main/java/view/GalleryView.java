@@ -89,7 +89,11 @@ public class GalleryView extends JPanel implements GalleryViewModelListener {
         title.getAccessibleContext().setAccessibleName("Gallery heading");
         add(title, BorderLayout.NORTH);
 
-        final JScrollPane filterScroll = new JScrollPane(buildFilterPanel());
+        final JPanel filterPanel = buildFilterPanel();
+        final JScrollPane filterScroll = new JScrollPane(filterPanel);
+        // Leave room for the scroll bar so it does not cover the controls.
+        filterScroll.setPreferredSize(new Dimension(filterPanel.getPreferredSize().width
+                + filterScroll.getVerticalScrollBar().getPreferredSize().width, 0));
         filterScroll.setBorder(BorderFactory.createEmptyBorder());
         filterScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         add(filterScroll, BorderLayout.WEST);
