@@ -3,8 +3,7 @@ package interface_adapter.browse_pets;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import entity.Pet;
-import entity.PetStatus;
+import use_case.browse_pets.PetSummary;
 import use_case.browse_pets.BrowsePetsOutputBoundary;
 import use_case.browse_pets.BrowsePetsOutputData;
 
@@ -34,14 +33,14 @@ public class BrowsePetsPresenter implements BrowsePetsOutputBoundary {
         viewModel.notifyStateChanged();
     }
 
-    private PetCardData toCard(Pet pet) {
+    private PetCardData toCard(PetSummary pet) {
         final String age = pet.getAgeYears() == 1 ? "1 year old" : pet.getAgeYears() + " years old";
-        final String summary = capitalize(pet.getSpecies().name()) + ", " + pet.getBreed() + ", " + age;
-        return new PetCardData(pet.getId(), pet.getName(), summary, statusText(pet.getStatus()), pet.getPhotoPath());
+        final String summary = capitalize(pet.getSpecies()) + ", " + pet.getBreed() + ", " + age;
+        return new PetCardData(pet.getPetId(), pet.getName(), summary, statusText(pet.getStatus()), pet.getPhotoPath());
     }
 
-    private String statusText(PetStatus status) {
-        return "Status: " + capitalize(status.name());
+    private String statusText(String status) {
+        return "Status: " + capitalize(status);
     }
 
     private String capitalize(String text) {

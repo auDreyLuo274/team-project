@@ -3,22 +3,17 @@ package interface_adapter.browse_pets;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import entity.Pet;
-import entity.PetSex;
-import entity.PetStatus;
-import entity.Species;
 import use_case.browse_pets.BrowsePetsOutputData;
+import use_case.browse_pets.PetSummary;
 
 class BrowsePetsPresenterTest {
 
-    private Pet pet(String name, int age) {
-        return new Pet("1", name, Species.CAT, "Tabby", age, PetSex.FEMALE, List.of(), "", false, true, true,
-                BigDecimal.TEN, "", PetStatus.AVAILABLE);
+    private PetSummary pet(String name, int age) {
+        return new PetSummary("1", name, "CAT", "Tabby", age, "AVAILABLE", "");
     }
 
     @Test
