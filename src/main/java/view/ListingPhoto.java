@@ -16,7 +16,7 @@ import javax.swing.SwingWorker;
 /** Saves selected reference photos and displays listing photos from disk. */
 final class ListingPhoto {
     private static final Path DIRECTORY = Path.of(System.getProperty("user.home"), ".pawportal", "breed-photos");
-    private static final String REFERENCE_LABEL = "Breed reference from TheCatAPI";
+    private static final String REFERENCE_LABEL = "TheCatAPI reference";
 
     private ListingPhoto() {
     }
