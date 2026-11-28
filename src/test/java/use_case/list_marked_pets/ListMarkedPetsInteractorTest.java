@@ -31,9 +31,9 @@ class ListMarkedPetsInteractorTest {
 
     private final ListMarkedPetsOutputBoundary presenter = new ListMarkedPetsOutputBoundary() {
         @Override
-        public void presentMarkedPets(List<Pet> found) {
+        public void presentMarkedPets(List<MarkedPetSummary> found) {
             events.add("pets");
-            found.forEach(p -> shownNames.add(p.getName()));
+            found.forEach(p -> shownNames.add(p.getName() + "/" + p.getStatus()));
         }
 
         @Override
@@ -68,14 +68,14 @@ class ListMarkedPetsInteractorTest {
         interactor(Set.of("p2", "p1")).execute("a1");
 
         assertEquals(List.of("pets"), events);
-        assertEquals(List.of("Miso", "Biscuit"), shownNames);
+        assertEquals(List.of("Miso/AVAILABLE", "Biscuit/AVAILABLE"), shownNames);
     }
 
     @Test
     void aMarkedCatThatNoLongerExistsIsLeftOut() {
         interactor(Set.of("p1", "gone")).execute("a1");
 
-        assertEquals(List.of("Miso"), shownNames);
+        assertEquals(List.of("Miso/AVAILABLE"), shownNames);
     }
 
     @Test

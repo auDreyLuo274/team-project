@@ -31,16 +31,21 @@ public class ListMarkedPetsInteractor implements ListMarkedPetsInputBoundary {
         this.presenter = presenter;
     }
 
+    private static MarkedPetSummary summarize(Pet pet) {
+        return new MarkedPetSummary(pet.getId(), pet.getName(), pet.getSpecies().name(), pet.getBreed(),
+                pet.getAgeYears(), pet.getStatus().name(), pet.getPhotoPath());
+    }
+
     @Override
     public void execute(String adopterId) {
         if (adopterId == null || adopterId.isBlank()) {
             presenter.presentLoginRequired();
             return;
         }
-        final List<Pet> pets = new ArrayList<>();
+        final List<MarkedPetSummary> pets = new ArrayList<>();
         for (String petId : new TreeSet<>(markedData.findMarkedPetIds(adopterId))) {
             final Optional<Pet> pet = petData.findById(petId);
-            pet.ifPresent(pets::add);
+            pet.ifPresent(found -> pets.add(summarize(found)));
         }
         presenter.presentMarkedPets(pets);
     }
