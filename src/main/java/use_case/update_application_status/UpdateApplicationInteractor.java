@@ -36,22 +36,69 @@ public class UpdateApplicationInteractor implements UpdateApplicationInputBounda
             return;
         }
 
-        application.updateStatus(status, inputData.getAdminNote());
-        try {
-            applicationDataAccess.save(application);
-            if (status == ApplicationStatus.APPROVED) {
-                Pet pet = petDataAccess.findById(application.getPetId());
-                pet.updatePetStatus(PetStatus.ADOPTED);
-                petDataAccess.update(pet);
+        Pet pet = null;
+        if (status == ApplicationStatus.APPROVED) {
+            pet = petDataAccess.findById(application.getPetId());
+            if (pet == null) {
+                presenter.prepareFailView("This pet is no longer listed, so the application cannot be approved.");
+                return;
+            }
+            if (pet.getStatus() == PetStatus.ADOPTED) {
+                presenter.prepareFailView("This pet has already been adopted.");
+                return;
             }
         }
-        catch (RuntimeException ex) {
+
+        application.updateStatus(status, inputData.getAdminNote());
+        final boolean saved;
+        if (pet == null) {
+            saved = saveApplication(application);
+        } else {
+            saved = approve(application, pet);
+        }
+        if (!saved) {
             presenter.prepareFailView("Could not save the change.");
             return;
         }
 
         presenter.prepareSuccessView(new UpdateApplicationOutputData(application.getId(),
                 application.getStatus(), application.getAdminNote()));
+    }
+
+    private boolean saveApplication(Application application) {
+        try {
+            applicationDataAccess.save(application);
+            return true;
+        } catch (RuntimeException ex) {
+            return false;
+        }
+    }
+
+    /**
+     * Marks the pet ADOPTED and saves the approved application as one change.
+     * If either write fails, the pet goes back to its previous status.
+     */
+    private boolean approve(Application application, Pet pet) {
+        final PetStatus previousStatus = pet.getStatus();
+        pet.updatePetStatus(PetStatus.ADOPTED);
+        if (!updatePet(pet)) {
+            pet.updatePetStatus(previousStatus);
+            return false;
+        }
+        if (!saveApplication(application)) {
+            pet.updatePetStatus(previousStatus);
+            updatePet(pet);
+            return false;
+        }
+        return true;
+    }
+
+    private boolean updatePet(Pet pet) {
+        try {
+            return petDataAccess.update(pet);
+        } catch (RuntimeException ex) {
+            return false;
+        }
     }
 
     @Override
