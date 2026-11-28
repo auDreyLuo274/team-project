@@ -18,7 +18,7 @@ import use_case.check_compatibility.AdopterPreferencesDataAccessInterface;
 class SavePreferencesInteractorTest {
     private final Map<String, AdopterPreferences> store = new HashMap<>();
     private final List<String> events = new ArrayList<>();
-    private AdopterPreferences loaded = new AdopterPreferences(true, true, true, true, true, null);
+    private SavedPreferences loaded = new SavedPreferences(true, true, true, true, true);
 
     private final AdopterPreferencesDataAccessInterface dataAccess = new AdopterPreferencesDataAccessInterface() {
         @Override
@@ -34,14 +34,20 @@ class SavePreferencesInteractorTest {
 
     private final SavePreferencesOutputBoundary presenter = new SavePreferencesOutputBoundary() {
         @Override
-        public void presentSaved(AdopterPreferences preferences) {
+        public void presentSaved(SavedPreferences preferences) {
             events.add("saved");
         }
 
         @Override
-        public void presentLoaded(AdopterPreferences preferences) {
+        public void presentLoaded(SavedPreferences preferences) {
             loaded = preferences;
             events.add("loaded");
+        }
+
+        @Override
+        public void presentNothingSaved() {
+            loaded = null;
+            events.add("nothing saved");
         }
 
         @Override
@@ -75,7 +81,11 @@ class SavePreferencesInteractorTest {
 
         interactor.load("a1");
 
-        assertEquals(saved, loaded);
+        assertEquals(true, loaded.hasChildren());
+        assertEquals(false, loaded.hasOtherPets());
+        assertEquals(true, loaded.canHandleMedicalNeeds());
+        assertEquals(false, loaded.canHandleKitten());
+        assertEquals(false, loaded.canHandlePregnantAnimal());
         assertEquals(List.of("loaded"), events);
     }
 
@@ -84,6 +94,7 @@ class SavePreferencesInteractorTest {
         interactor.load("a1");
 
         assertNull(loaded);
+        assertEquals(List.of("nothing saved"), events);
     }
 
     @Test

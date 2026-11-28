@@ -26,9 +26,15 @@ public class BrowsePetsInteractor implements BrowsePetsInputBoundary {
     @Override
     public void execute(BrowsePetsInputData inputData) {
         final List<PetFilter> filters = inputData.getFilters();
-        final List<Pet> matches = dataAccess.getAvailablePets().stream()
+        final List<PetSummary> matches = dataAccess.getAvailablePets().stream()
                 .filter(pet -> filters.stream().allMatch(filter -> filter.matches(pet)))
+                .map(BrowsePetsInteractor::summarize)
                 .collect(Collectors.toList());
         presenter.presentPets(new BrowsePetsOutputData(matches));
+    }
+
+    private static PetSummary summarize(Pet pet) {
+        return new PetSummary(pet.getId(), pet.getName(), pet.getSpecies().name(), pet.getBreed(),
+                pet.getAgeYears(), pet.getStatus().name(), pet.getPhotoPath());
     }
 }

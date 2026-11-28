@@ -17,7 +17,7 @@ import entity.Species;
 class ViewPetDetailsInteractorTest {
 
     private static class FakePresenter implements ViewPetDetailsOutputBoundary {
-        private Pet shown;
+        private PetProfile shown;
         private String error;
 
         @Override
@@ -49,7 +49,7 @@ class ViewPetDetailsInteractorTest {
     void availableCatIsShown() {
         final FakePresenter presenter = run("1", pet("1", PetStatus.AVAILABLE));
 
-        assertEquals("1", presenter.shown.getId());
+        assertEquals("1", presenter.shown.getPetId());
         assertNull(presenter.error);
     }
 
@@ -76,5 +76,28 @@ class ViewPetDetailsInteractorTest {
                 .execute(new ViewPetDetailsInputData("1"));
 
         assertEquals("This cat is no longer available.", presenter.error);
+    }
+
+    @Test
+    void theProfileCarriesPlainTextAndFlagsNotTheEntity() {
+        final Pet stored = new Pet("1", "Miso", Species.CAT, "Tabby", 2, PetSex.FEMALE,
+                List.of(entity.Temperament.CALM, entity.Temperament.GOOD_WITH_KIDS), "Eats special food", true,
+                true, false, new BigDecimal("150"), "miso.jpg", PetStatus.AVAILABLE);
+
+        final PetProfile profile = run("1", stored).shown;
+
+        assertEquals("Miso", profile.getName());
+        assertEquals("CAT", profile.getSpecies());
+        assertEquals("Tabby", profile.getBreed());
+        assertEquals(2, profile.getAgeYears());
+        assertEquals("FEMALE", profile.getSex());
+        assertEquals(List.of("CALM", "GOOD_WITH_KIDS"), profile.getTemperaments());
+        assertEquals("Eats special food", profile.getHealthNotes());
+        assertEquals(true, profile.needsMedication());
+        assertEquals(true, profile.isVaccinated());
+        assertEquals(false, profile.isSpayedNeutered());
+        assertEquals(new BigDecimal("150"), profile.getAdoptionFee());
+        assertEquals("miso.jpg", profile.getPhotoPath());
+        assertEquals("AVAILABLE", profile.getStatus());
     }
 }

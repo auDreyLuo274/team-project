@@ -9,7 +9,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import entity.AdopterPreferences;
+import use_case.save_preferences.SavedPreferences;
 
 class SavePreferencesAdapterTest {
     private final PreferencesViewModel viewModel = new PreferencesViewModel();
@@ -17,7 +17,7 @@ class SavePreferencesAdapterTest {
 
     @Test
     void savedFillsTheAnswersAndSaysSo() {
-        presenter.presentSaved(new AdopterPreferences(true, false, true, false, true, null));
+        presenter.presentSaved(new SavedPreferences(true, false, true, false, true));
 
         final PreferencesState state = viewModel.getState();
         assertTrue(state.hasChildren());
@@ -30,10 +30,21 @@ class SavePreferencesAdapterTest {
 
     @Test
     void loadedNothingGivesAnEmptyForm() {
-        presenter.presentLoaded(null);
+        presenter.presentNothingSaved();
 
         assertFalse(viewModel.getState().hasChildren());
         assertEquals("", viewModel.getState().getMessage());
+    }
+
+    @Test
+    void loadedFillsTheAnswersWithoutASaveMessage() {
+        presenter.presentLoaded(new SavedPreferences(false, true, false, true, false));
+
+        final PreferencesState state = viewModel.getState();
+        assertTrue(state.hasOtherPets());
+        assertTrue(state.canHandleKitten());
+        assertFalse(state.hasChildren());
+        assertEquals("", state.getMessage());
     }
 
     @Test
@@ -48,7 +59,7 @@ class SavePreferencesAdapterTest {
         final int[] calls = {0};
         viewModel.addListener(() -> calls[0]++);
 
-        presenter.presentLoaded(null);
+        presenter.presentNothingSaved();
 
         assertEquals(1, calls[0]);
     }

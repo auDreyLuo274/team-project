@@ -16,7 +16,7 @@ import entity.Species;
 class BrowsePetsInteractorTest {
 
     private static class FakePresenter implements BrowsePetsOutputBoundary {
-        private List<Pet> shown;
+        private List<PetSummary> shown;
 
         @Override
         public void presentPets(BrowsePetsOutputData outputData) {
@@ -51,7 +51,7 @@ class BrowsePetsInteractorTest {
         final FakePresenter presenter = run(List.of(olderThanThree));
 
         assertEquals(1, presenter.shown.size());
-        assertEquals("2", presenter.shown.get(0).getId());
+        assertEquals("2", presenter.shown.get(0).getPetId());
     }
 
     @Test

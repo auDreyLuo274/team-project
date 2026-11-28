@@ -17,7 +17,17 @@ public final class FilterLabels {
      * @return the label to show
      */
     public static String temperament(Temperament temperament) {
-        final String words = temperament.name().toLowerCase().replace('_', ' ');
+        return temperament(temperament.name());
+    }
+
+    /**
+     * Writes a temperament tag given by name in plain words, for example "GOOD_WITH_KIDS" becomes "Good with kids".
+     *
+     * @param temperamentName the name of the tag
+     * @return the label to show
+     */
+    public static String temperament(String temperamentName) {
+        final String words = temperamentName.toLowerCase().replace('_', ' ');
         return words.substring(0, 1).toUpperCase() + words.substring(1);
     }
 }

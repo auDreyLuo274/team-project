@@ -1,8 +1,10 @@
 package use_case.view_pet_details;
 
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import entity.Pet;
+import entity.PetProfileDetails;
 import entity.PetStatus;
 
 /**
@@ -28,9 +30,19 @@ public class ViewPetDetailsInteractor implements ViewPetDetailsInputBoundary {
     public void execute(ViewPetDetailsInputData inputData) {
         final Optional<Pet> found = dataAccess.findById(inputData.getPetId());
         if (found.isPresent() && found.get().getStatus() == PetStatus.AVAILABLE) {
-            presenter.presentPet(new ViewPetDetailsOutputData(found.get()));
+            presenter.presentPet(new ViewPetDetailsOutputData(profileOf(found.get())));
         } else {
             presenter.presentNotFound("This cat is no longer available.");
         }
+    }
+
+    private static PetProfile profileOf(Pet pet) {
+        final PetProfileDetails details = pet.getProfileDetails();
+        return new PetProfile(pet.getId(), pet.getName(), pet.getSpecies().name(), pet.getBreed(),
+                pet.getAgeYears(), pet.getSex().name(),
+                pet.getTemperamentTags().stream().map(Enum::name).collect(Collectors.toList()),
+                pet.getHealthNotes(), pet.needsMedication(), pet.isVaccinated(), pet.isSpayedNeutered(),
+                pet.getAdoptionFee(), pet.getPhotoPath(), pet.getStatus().name(), details.getColor(),
+                details.getHairLength(), details.getMicrochipped());
     }
 }

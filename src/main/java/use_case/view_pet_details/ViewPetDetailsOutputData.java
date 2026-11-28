@@ -1,28 +1,26 @@
 package use_case.view_pet_details;
 
-import entity.Pet;
-
 /**
- * The cat to show on the detail page.
+ * The cat to show on the detail page, as a plain profile.
  */
 public class ViewPetDetailsOutputData {
-    private final Pet pet;
+    private final PetProfile pet;
 
     /**
-     * Creates the result.
+     * Creates the output.
      *
-     * @param pet the cat found
+     * @param pet the profile of the cat
      */
-    public ViewPetDetailsOutputData(Pet pet) {
+    public ViewPetDetailsOutputData(PetProfile pet) {
         this.pet = pet;
     }
 
     /**
-     * Returns the cat.
+     * Returns the cat's profile.
      *
-     * @return the cat found
+     * @return the profile
      */
-    public Pet getPet() {
+    public PetProfile getPet() {
         return pet;
     }
 }

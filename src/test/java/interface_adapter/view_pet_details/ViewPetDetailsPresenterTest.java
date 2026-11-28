@@ -6,16 +6,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
 import data_access.StarterPetCatalog;
-import entity.Pet;
-import entity.PetSex;
-import entity.PetStatus;
-import entity.Species;
-import entity.Temperament;
 import interface_adapter.ViewManagerModel;
+import use_case.view_pet_details.PetProfile;
+import use_case.view_pet_details.ViewPetDetailsInputData;
+import use_case.view_pet_details.ViewPetDetailsInteractor;
 import use_case.view_pet_details.ViewPetDetailsOutputData;
 
 class ViewPetDetailsPresenterTest {
@@ -23,15 +22,15 @@ class ViewPetDetailsPresenterTest {
     private final ViewManagerModel viewManagerModel = new ViewManagerModel();
     private final ViewPetDetailsPresenter presenter = new ViewPetDetailsPresenter(viewModel, viewManagerModel);
 
-    private Pet pet(String notes, List<Temperament> tags) {
-        return new Pet("7", "Miso", Species.CAT, "Tabby", 2, PetSex.FEMALE, tags, notes, true, true, false,
-                new BigDecimal("150"), "", PetStatus.AVAILABLE);
+    private PetProfile pet(String notes, List<String> tags) {
+        return new PetProfile("7", "Miso", "CAT", "Tabby", 2, "FEMALE", tags, notes, true, true, false,
+                new BigDecimal("150"), "", "AVAILABLE", "", "", null);
     }
 
     @Test
     void writesTheProfileAsText() {
         presenter.presentPet(new ViewPetDetailsOutputData(
-                pet("Eats special food", List.of(Temperament.CALM, Temperament.GOOD_WITH_KIDS))));
+                pet("Eats special food", List.of("CALM", "GOOD_WITH_KIDS"))));
 
         final PetDetailState state = viewModel.getState();
         assertEquals("7", state.getPetId());
@@ -56,7 +55,8 @@ class ViewPetDetailsPresenterTest {
 
     @Test
     void starterProfileDisplaysTheVerifiedDetails() {
-        presenter.presentPet(new ViewPetDetailsOutputData(StarterPetCatalog.createPets().get(0)));
+        new ViewPetDetailsInteractor(id -> Optional.of(StarterPetCatalog.createPets().get(0)), presenter)
+                .execute(new ViewPetDetailsInputData("any"));
 
         final PetDetailState state = viewModel.getState();
         assertEquals("Piggy- CP", state.getName());
