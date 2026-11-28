@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -16,6 +16,7 @@ import entity.Species;
 import entity.Temperament;
 import use_case.browse_pets.BrowsePetsInputBoundary;
 import use_case.browse_pets.BrowsePetsInputData;
+import use_case.browse_pets.PetFilter;
 
 class BrowsePetsControllerTest {
 
@@ -28,114 +29,125 @@ class BrowsePetsControllerTest {
         }
     }
 
-    private Pet pet(int age, boolean needsMedication, Temperament... tags) {
-        return new Pet("1", "Miso", Species.CAT, "Tabby", age, PetSex.FEMALE, List.of(tags), "", needsMedication,
-                true, true, BigDecimal.TEN, "", PetStatus.AVAILABLE);
+    private final CapturingInteractor interactor = new CapturingInteractor();
+    private final BrowsePetsController controller =
+            new BrowsePetsController(interactor, FilterSpecs.loadRegistered());
+
+    private Pet pet(String breed, int age, PetSex sex, boolean needsMedication, boolean vaccinated,
+                    boolean spayedNeutered, Temperament... tags) {
+        return new Pet("1", "Miso", Species.CAT, breed, age, sex, List.of(tags), "", needsMedication, vaccinated,
+                spayedNeutered, BigDecimal.TEN, "", PetStatus.AVAILABLE);
     }
 
-    private long matchCount(BrowsePetsInputData data, Pet pet) {
-        return data.getFilters().stream().filter(filter -> filter.matches(pet)).count();
+    private Pet pet() {
+        return pet("Tabby", 2, PetSex.FEMALE, false, true, true);
+    }
+
+    private long matchCount(Pet pet) {
+        return interactor.received.getFilters().stream().filter(filter -> filter.matches(pet)).count();
     }
 
     @Test
     void noChoicesSendsNoFilters() {
-        final CapturingInteractor interactor = new CapturingInteractor();
+        controller.browse(Map.of());
 
-        new BrowsePetsController(interactor).browse(AgeFilterOption.ANY, Set.of(), false);
+        assertTrue(interactor.received.getFilters().isEmpty());
+    }
+
+    @Test
+    void choicesThatMeanNoFilterSendNoFilters() {
+        controller.browse(Map.of("age", List.of("ANY"), "sex", List.of("ANY"), "breed", List.of(" "),
+                "color", List.of(""), "hairLength", List.of("ANY"), "temperament", List.of(), "health", List.of()));
 
         assertTrue(interactor.received.getFilters().isEmpty());
     }
 
     @Test
     void ageChoiceBecomesAnAgeFilter() {
-        final CapturingInteractor interactor = new CapturingInteractor();
-
-        new BrowsePetsController(interactor).browse(AgeFilterOption.ONE_TO_THREE, Set.of(), false);
+        controller.browse(Map.of("age", List.of("ONE_TO_THREE")));
 
         assertEquals(1, interactor.received.getFilters().size());
-        assertTrue(interactor.received.getFilters().get(0).matches(pet(2, false)));
-        assertEquals(0, matchCount(interactor.received, pet(6, false)));
-    }
-
-    @Test
-    void temperamentChoiceBecomesATemperamentFilter() {
-        final CapturingInteractor interactor = new CapturingInteractor();
-
-        new BrowsePetsController(interactor).browse(AgeFilterOption.ANY, Set.of(Temperament.CALM), false);
-
-        assertEquals(1, matchCount(interactor.received, pet(2, false, Temperament.CALM)));
-        assertEquals(0, matchCount(interactor.received, pet(2, false, Temperament.SHY)));
-    }
-
-    @Test
-    void noMedicalNeedsBecomesAHealthFilter() {
-        final CapturingInteractor interactor = new CapturingInteractor();
-
-        new BrowsePetsController(interactor).browse(AgeFilterOption.ANY, Set.of(), true);
-
-        assertEquals(1, matchCount(interactor.received, pet(2, false)));
-        assertEquals(0, matchCount(interactor.received, pet(2, true)));
-    }
-
-    @Test
-    void severalChoicesSendSeveralFilters() {
-        final CapturingInteractor interactor = new CapturingInteractor();
-
-        new BrowsePetsController(interactor).browse(
-                AgeFilterOption.UNDER_ONE, Set.of(Temperament.PLAYFUL), true);
-
-        assertEquals(3, interactor.received.getFilters().size());
-    }
-
-    private Pet pet(String breed, PetSex sex, boolean vaccinated, boolean spayedNeutered) {
-        return new Pet("1", "Miso", Species.CAT, breed, 2, sex, List.of(), "", false, vaccinated, spayedNeutered,
-                BigDecimal.TEN, "", PetStatus.AVAILABLE);
-    }
-
-    @Test
-    void breedTextBecomesABreedFilter() {
-        final CapturingInteractor interactor = new CapturingInteractor();
-        final BrowseChoices choices = new BrowseChoices();
-        choices.setBreed("tab");
-
-        new BrowsePetsController(interactor).browse(choices);
-
-        assertEquals(1, matchCount(interactor.received, pet("Tabby", PetSex.FEMALE, true, true)));
-        assertEquals(0, matchCount(interactor.received, pet("Siamese", PetSex.FEMALE, true, true)));
+        assertEquals(1, matchCount(pet("Tabby", 2, PetSex.FEMALE, false, true, true)));
+        assertEquals(0, matchCount(pet("Tabby", 6, PetSex.FEMALE, false, true, true)));
     }
 
     @Test
     void sexChoiceBecomesASexFilter() {
-        final CapturingInteractor interactor = new CapturingInteractor();
-        final BrowseChoices choices = new BrowseChoices();
-        choices.setSex(SexFilterOption.MALE);
+        controller.browse(Map.of("sex", List.of("MALE")));
 
-        new BrowsePetsController(interactor).browse(choices);
-
-        assertEquals(1, matchCount(interactor.received, pet("Tabby", PetSex.MALE, true, true)));
-        assertEquals(0, matchCount(interactor.received, pet("Tabby", PetSex.FEMALE, true, true)));
+        assertEquals(1, matchCount(pet("Tabby", 2, PetSex.MALE, false, true, true)));
+        assertEquals(0, matchCount(pet()));
     }
 
     @Test
-    void vaccinatedAndSpayedChoicesBecomeFilters() {
-        final CapturingInteractor interactor = new CapturingInteractor();
-        final BrowseChoices choices = new BrowseChoices();
-        choices.setVaccinatedOnly(true);
-        choices.setSpayedNeuteredOnly(true);
+    void breedTextBecomesABreedFilter() {
+        controller.browse(Map.of("breed", List.of("tab")));
 
-        new BrowsePetsController(interactor).browse(choices);
-
-        assertEquals(2, interactor.received.getFilters().size());
-        assertEquals(2, matchCount(interactor.received, pet("Tabby", PetSex.MALE, true, true)));
-        assertEquals(1, matchCount(interactor.received, pet("Tabby", PetSex.MALE, true, false)));
+        assertEquals(1, matchCount(pet()));
+        assertEquals(0, matchCount(pet("Siamese", 2, PetSex.FEMALE, false, true, true)));
     }
 
     @Test
-    void freshChoicesSendNoFilters() {
-        final CapturingInteractor interactor = new CapturingInteractor();
+    void temperamentChoicesBecomeOneTemperamentFilter() {
+        controller.browse(Map.of("temperament", List.of("CALM", "SHY")));
 
-        new BrowsePetsController(interactor).browse(new BrowseChoices());
+        assertEquals(1, interactor.received.getFilters().size());
+        assertEquals(1, matchCount(pet("Tabby", 2, PetSex.FEMALE, false, true, true,
+                Temperament.CALM, Temperament.SHY)));
+        assertEquals(0, matchCount(pet("Tabby", 2, PetSex.FEMALE, false, true, true, Temperament.CALM)));
+    }
 
-        assertTrue(interactor.received.getFilters().isEmpty());
+    @Test
+    void eachTickedHealthBoxBecomesAFilter() {
+        controller.browse(Map.of("health", List.of("NO_MEDICAL_NEEDS", "VACCINATED", "SPAYED_NEUTERED")));
+
+        assertEquals(3, interactor.received.getFilters().size());
+        assertEquals(3, matchCount(pet()));
+        assertEquals(2, matchCount(pet("Tabby", 2, PetSex.FEMALE, true, true, true)));
+    }
+
+    @Test
+    void severalChoicesSendSeveralFilters() {
+        controller.browse(Map.of("age", List.of("ONE_TO_THREE"), "sex", List.of("FEMALE"),
+                "breed", List.of("tab")));
+
+        assertEquals(3, interactor.received.getFilters().size());
+        assertEquals(3, matchCount(pet()));
+    }
+
+    @Test
+    void aBrandNewFilterWorksWithoutChangingTheController() {
+        final PetFilter onlyMiso = pet -> pet.getName().equals("Miso");
+        final FilterSpec nameSpec = new FilterSpec() {
+            @Override
+            public String getId() {
+                return "name";
+            }
+
+            @Override
+            public String getLabel() {
+                return "Name";
+            }
+
+            @Override
+            public Control getControl() {
+                return Control.TEXT;
+            }
+
+            @Override
+            public List<FilterOption> getOptions() {
+                return List.of();
+            }
+
+            @Override
+            public List<PetFilter> toFilters(List<String> chosen) {
+                return chosen.isEmpty() ? List.of() : List.of(onlyMiso);
+            }
+        };
+
+        new BrowsePetsController(interactor, List.of(nameSpec)).browse(Map.of("name", List.of("Miso")));
+
+        assertEquals(1, interactor.received.getFilters().size());
+        assertEquals(1, matchCount(pet()));
     }
 }

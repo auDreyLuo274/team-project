@@ -1,0 +1,4 @@
+use_case.check_compatibility.ChildrenRule
+use_case.check_compatibility.OtherPetsRule
+use_case.check_compatibility.MedicalNeedsRule
+use_case.check_compatibility.KittenRule

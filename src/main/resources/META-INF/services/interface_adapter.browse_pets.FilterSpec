@@ -1,0 +1,7 @@
+interface_adapter.browse_pets.BreedFilterSpec
+interface_adapter.browse_pets.AgeFilterSpec
+interface_adapter.browse_pets.SexFilterSpec
+interface_adapter.browse_pets.ColorFilterSpec
+interface_adapter.browse_pets.HairLengthFilterSpec
+interface_adapter.browse_pets.TemperamentFilterSpec
+interface_adapter.browse_pets.HealthFilterSpec

@@ -40,6 +40,8 @@ import interface_adapter.save_preferences.PreferencesViewModel;
 import interface_adapter.save_preferences.SavePreferencesController;
 import interface_adapter.save_preferences.SavePreferencesPresenter;
 import interface_adapter.browse_pets.BrowsePetsPresenter;
+import interface_adapter.browse_pets.FilterSpec;
+import interface_adapter.browse_pets.FilterSpecs;
 import interface_adapter.browse_pets.GalleryViewModel;
 import interface_adapter.view_pet_details.PetDetailViewModel;
 import interface_adapter.view_pet_details.ViewPetDetailsController;
@@ -183,10 +185,11 @@ public final class AppBuilder {
         connectApplyButton();
 
         final GalleryViewModel galleryViewModel = new GalleryViewModel();
+        final List<FilterSpec> filterSpecs = FilterSpecs.loadRegistered();
         final BrowsePetsPresenter presenter = new BrowsePetsPresenter(galleryViewModel);
         final BrowsePetsInteractor interactor = new BrowsePetsInteractor(petData, presenter);
-        final BrowsePetsController controller = new BrowsePetsController(interactor);
-        final GalleryView galleryView = new GalleryView(controller, galleryViewModel, detailsController);
+        final BrowsePetsController controller = new BrowsePetsController(interactor, filterSpecs);
+        final GalleryView galleryView = new GalleryView(controller, galleryViewModel, detailsController, filterSpecs);
         final JPanel gallery = accountBar == null ? galleryView : withTopBar(accountBar, galleryView);
         views.add(gallery, GalleryView.VIEW_NAME);
         viewManagerModel.addListener(() -> {
@@ -206,7 +209,7 @@ public final class AppBuilder {
 
         final CompatibilityViewModel compatibilityViewModel = new CompatibilityViewModel();
         final CheckCompatibilityController checkController = new CheckCompatibilityController(
-                new CheckCompatibilityInteractor(pets, preferences, CompatibilityEngine.withStandardRules(),
+                new CheckCompatibilityInteractor(pets, preferences, CompatibilityEngine.loadRegisteredRules(),
                         new CheckCompatibilityPresenter(compatibilityViewModel)));
         final CompatibilityPanel compatibilityPanel = new CompatibilityPanel(compatibilityViewModel);
         compatibilityPanel.setLogInAction(() -> viewManagerModel.setActiveView(LoginViewModel.VIEW_NAME));

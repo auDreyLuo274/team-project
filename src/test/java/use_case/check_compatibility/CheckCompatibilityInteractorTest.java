@@ -61,7 +61,7 @@ class CheckCompatibilityInteractorTest {
             }
         };
         return new CheckCompatibilityInteractor(pets, preferences,
-                CompatibilityEngine.withStandardRules(), presenter);
+                CompatibilityEngine.loadRegisteredRules(), presenter);
     }
 
     @Test
