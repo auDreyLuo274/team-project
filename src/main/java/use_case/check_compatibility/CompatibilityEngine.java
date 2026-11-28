@@ -2,6 +2,7 @@ package use_case.check_compatibility;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ServiceLoader;
 
 import entity.AdopterPreferences;
 import entity.Pet;
@@ -22,13 +23,19 @@ public class CompatibilityEngine {
     }
 
     /**
-     * Creates the engine with every rule the project has today.
+     * Creates the engine with every rule that is registered in
+     * {@code META-INF/services/use_case.check_compatibility.CompatibilityRule}. To add a rule, write a new
+     * class that implements {@link CompatibilityRule} (with a public constructor that takes nothing) and add its
+     * name to that file. No existing class is changed.
      *
-     * @return an engine with the children, other pets, medical needs and kitten rules
+     * @return an engine with all registered rules, in the order they are listed
      */
-    public static CompatibilityEngine withStandardRules() {
-        return new CompatibilityEngine(List.of(new ChildrenRule(), new OtherPetsRule(),
-                new MedicalNeedsRule(), new KittenRule()));
+    public static CompatibilityEngine loadRegisteredRules() {
+        final List<CompatibilityRule> found = new ArrayList<>();
+        for (CompatibilityRule rule : ServiceLoader.load(CompatibilityRule.class)) {
+            found.add(rule);
+        }
+        return new CompatibilityEngine(found);
     }
 
     /**

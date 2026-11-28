@@ -31,12 +31,21 @@ class CompatibilityEngineTest {
     }
 
     @Test
-    void standardRulesFlagAKittenThatNeedsMedicationForAnAdopterWhoCannot() {
-        final List<RuleResult> results = CompatibilityEngine.withStandardRules()
+    void registeredRulesFlagAKittenThatNeedsMedicationForAnAdopterWhoCannot() {
+        final List<RuleResult> results = CompatibilityEngine.loadRegisteredRules()
                 .evaluate(pet, new AdopterPreferences(false, false, false, false, false, null));
 
         assertEquals(4, results.size());
         final long conflicts = results.stream().filter(r -> r.getStatus() == RuleResult.Status.CONFLICT).count();
         assertEquals(2, conflicts);
+    }
+
+    @Test
+    void registeredRulesAreLoadedWithoutNamingThemInCode() {
+        final List<RuleResult> results = CompatibilityEngine.loadRegisteredRules()
+                .evaluate(pet, new AdopterPreferences(true, true, true, true, true, null));
+
+        assertEquals(List.of("Children at home", "Other pets at home", "Medical needs", "Kitten care"),
+                results.stream().map(RuleResult::getTrait).toList());
     }
 }

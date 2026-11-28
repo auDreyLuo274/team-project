@@ -206,7 +206,7 @@ public final class AppBuilder {
 
         final CompatibilityViewModel compatibilityViewModel = new CompatibilityViewModel();
         final CheckCompatibilityController checkController = new CheckCompatibilityController(
-                new CheckCompatibilityInteractor(pets, preferences, CompatibilityEngine.withStandardRules(),
+                new CheckCompatibilityInteractor(pets, preferences, CompatibilityEngine.loadRegisteredRules(),
                         new CheckCompatibilityPresenter(compatibilityViewModel)));
         final CompatibilityPanel compatibilityPanel = new CompatibilityPanel(compatibilityViewModel);
         compatibilityPanel.setLogInAction(() -> viewManagerModel.setActiveView(LoginViewModel.VIEW_NAME));
