@@ -162,6 +162,17 @@ public class FileApplicationDataAccessObject implements SubmitApplicationDataAcc
     }
 
     @Override
+    public List<Application> getApplicationsByPet(String petId) {
+        final List<Application> result = new ArrayList<>();
+        for (Application application : applications.values()) {
+            if (application.getPetId().equals(petId)) {
+                result.add(application.copy());
+            }
+        }
+        return result;
+    }
+
+    @Override
     public List<Application> getAllApplications() {
         final List<Application> result = new ArrayList<>();
         for (Application application : applications.values()) {

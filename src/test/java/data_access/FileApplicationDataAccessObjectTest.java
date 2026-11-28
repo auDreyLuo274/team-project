@@ -139,6 +139,24 @@ class FileApplicationDataAccessObjectTest {
         assertArrayEquals(new String[] {FILE_NAME}, folder.toFile().list());
     }
 
+    @Test
+    void findsEveryApplicationForOnePet() {
+        final String path = folder.resolve(FILE_NAME).toString();
+        final FileApplicationDataAccessObject dataAccess = new FileApplicationDataAccessObject(path);
+        dataAccess.save(pendingApplication("a1"));
+        dataAccess.save(new Application("a2", "alice", "tama", "House", "None", "2 adults", "alice@example.com",
+                "", LocalDate.of(2026, 11, 21)));
+        dataAccess.save(new Application("a3", ADOPTER, "mochi", "Condo", "One cat", "1 adult", "bob@example.com",
+                "", LocalDate.of(2026, 11, 22)));
+
+        final List<Application> forTama = dataAccess.getApplicationsByPet("tama");
+
+        assertEquals(2, forTama.size());
+        assertEquals("a1", forTama.get(0).getId());
+        assertEquals("a2", forTama.get(1).getId());
+        assertTrue(dataAccess.getApplicationsByPet("nobody").isEmpty());
+    }
+
     private Application pendingApplication(String id) {
         return new Application(id, ADOPTER, "tama", "Condo", "One cat", "1 adult",
                 "bob@example.com", "", LocalDate.of(2026, 11, 20));

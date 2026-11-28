@@ -1,12 +1,15 @@
 package use_case.update_application_status;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -30,13 +33,17 @@ class UpdateApplicationInteractorTest {
     @BeforeEach
     void setUp() {
         applications = new FakeApplicationDataAccess();
-        applications.add(new Application("a1", "alice", "mochi", "House", "Had two cats", "2 adults",
-                "me@example.com", "", LocalDate.of(2026, 11, 16)));
+        applications.add(application("a1", "alice", "mochi"));
         pets = new FakePetDataAccess();
         pets.add(new Pet("mochi", "Mochi", Species.CAT, "Tabby", 2, PetSex.FEMALE, List.of(), "", false, true,
                 true, BigDecimal.ZERO, "", PetStatus.PENDING));
         presenter = new RecordingPresenter();
         interactor = new UpdateApplicationInteractor(presenter, pets, applications);
+    }
+
+    private static Application application(String id, String adopterId, String petId) {
+        return new Application(id, adopterId, petId, "House", "Had two cats", "2 adults", "me@example.com", "",
+                LocalDate.of(2026, 11, 16));
     }
 
     @Test
@@ -60,6 +67,42 @@ class UpdateApplicationInteractorTest {
         assertEquals(ApplicationStatus.APPROVED, applications.saved.get("a1").getStatus());
         assertEquals(PetStatus.ADOPTED, pets.updated.get("mochi").getStatus());
         assertEquals(ApplicationStatus.APPROVED, presenter.output.getApplicationStatus());
+    }
+
+    @Test
+    void approvingRejectsTheOtherActiveApplicationsForThePet() {
+        applications.add(application("a2", "bob", "mochi"));
+        final Application interview = application("a3", "carol", "mochi");
+        interview.updateStatus(ApplicationStatus.INTERVIEW, "Call us on Friday");
+        applications.add(interview);
+        final Application withdrawn = application("a4", "dave", "mochi");
+        withdrawn.withdraw();
+        applications.add(withdrawn);
+        applications.add(application("a5", "erin", "tofu"));
+
+        interactor.execute(new UpdateApplicationInputData("a1", ApplicationStatus.APPROVED, "Welcome!"));
+
+        assertEquals(ApplicationStatus.APPROVED, applications.saved.get("a1").getStatus());
+        assertEquals("Welcome!", applications.saved.get("a1").getAdminNote());
+        assertEquals(ApplicationStatus.REJECTED, applications.saved.get("a2").getStatus());
+        assertEquals(UpdateApplicationInteractor.ADOPTED_BY_SOMEONE_ELSE, applications.saved.get("a2").getAdminNote());
+        assertEquals(ApplicationStatus.REJECTED, applications.saved.get("a3").getStatus());
+        assertFalse(applications.saved.containsKey("a4"));
+        assertFalse(applications.saved.containsKey("a5"));
+        assertEquals(ApplicationStatus.WITHDRAWN, applications.getApplicationById("a4").getStatus());
+        assertEquals(ApplicationStatus.PENDING, applications.getApplicationById("a5").getStatus());
+        assertEquals(ApplicationStatus.APPROVED, presenter.output.getApplicationStatus());
+    }
+
+    @Test
+    void interviewOrRejectLeavesTheOtherApplicationsAlone() {
+        applications.add(application("a2", "bob", "mochi"));
+
+        interactor.execute(new UpdateApplicationInputData("a1", ApplicationStatus.INTERVIEW, ""));
+        interactor.execute(new UpdateApplicationInputData("a1", ApplicationStatus.REJECTED, ""));
+
+        assertFalse(applications.saved.containsKey("a2"));
+        assertEquals(ApplicationStatus.PENDING, applications.getApplicationById("a2").getStatus());
     }
 
     @Test
@@ -113,7 +156,7 @@ class UpdateApplicationInteractorTest {
     }
 
     private static final class FakeApplicationDataAccess implements UpdateApplicationDataAccessInterface {
-        private final Map<String, Application> applications = new HashMap<>();
+        private final Map<String, Application> applications = new LinkedHashMap<>();
         private final Map<String, Application> saved = new HashMap<>();
         private boolean failOnSave;
 
@@ -127,11 +170,23 @@ class UpdateApplicationInteractorTest {
         }
 
         @Override
+        public List<Application> getApplicationsByPet(String petId) {
+            final List<Application> result = new ArrayList<>();
+            for (Application application : applications.values()) {
+                if (application.getPetId().equals(petId)) {
+                    result.add(application.copy());
+                }
+            }
+            return result;
+        }
+
+        @Override
         public void save(Application application) {
             if (failOnSave) {
                 throw new RuntimeException("disk full");
             }
             saved.put(application.getId(), application);
+            applications.put(application.getId(), application.copy());
         }
     }
 
