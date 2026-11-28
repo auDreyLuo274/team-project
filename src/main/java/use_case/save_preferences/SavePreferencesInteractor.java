@@ -1,5 +1,7 @@
 package use_case.save_preferences;
 
+import java.util.Optional;
+
 import entity.AdopterPreferences;
 import use_case.check_compatibility.AdopterPreferencesDataAccessInterface;
 
@@ -32,7 +34,7 @@ public class SavePreferencesInteractor implements SavePreferencesInputBoundary {
                 inputData.hasOtherPets(), inputData.canHandleMedicalNeeds(), inputData.canHandleKitten(),
                 inputData.canHandlePregnantAnimal(), null);
         dataAccess.save(inputData.getAdopterId(), preferences);
-        presenter.presentSaved(preferences);
+        presenter.presentSaved(summarize(preferences));
     }
 
     @Override
@@ -41,7 +43,18 @@ public class SavePreferencesInteractor implements SavePreferencesInputBoundary {
             presenter.presentError("Log in to save your profile.");
             return;
         }
-        presenter.presentLoaded(dataAccess.findByAdopterId(adopterId).orElse(null));
+        final Optional<AdopterPreferences> saved = dataAccess.findByAdopterId(adopterId);
+        if (saved.isPresent()) {
+            presenter.presentLoaded(summarize(saved.get()));
+        } else {
+            presenter.presentNothingSaved();
+        }
+    }
+
+    private SavedPreferences summarize(AdopterPreferences preferences) {
+        return new SavedPreferences(preferences.hasChildren(), preferences.hasOtherPets(),
+                preferences.canHandleMedicalNeeds(), preferences.canHandleKitten(),
+                preferences.canHandlePregnantAnimal());
     }
 
     private boolean isBlank(String text) {

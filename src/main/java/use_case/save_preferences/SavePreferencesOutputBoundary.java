@@ -1,7 +1,5 @@
 package use_case.save_preferences;
 
-import entity.AdopterPreferences;
-
 /**
  * Receives the result of the save preferences use case.
  */
@@ -12,14 +10,19 @@ public interface SavePreferencesOutputBoundary {
      *
      * @param preferences what was saved
      */
-    void presentSaved(AdopterPreferences preferences);
+    void presentSaved(SavedPreferences preferences);
 
     /**
      * Shows what the adopter saved before.
      *
-     * @param preferences what was saved, or null if nothing was saved yet
+     * @param preferences what was saved
      */
-    void presentLoaded(AdopterPreferences preferences);
+    void presentLoaded(SavedPreferences preferences);
+
+    /**
+     * Tells the page the adopter has not saved anything yet.
+     */
+    void presentNothingSaved();
 
     /**
      * Tells the adopter the answers could not be saved.

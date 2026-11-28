@@ -1,7 +1,7 @@
 package interface_adapter.save_preferences;
 
-import entity.AdopterPreferences;
 import use_case.save_preferences.SavePreferencesOutputBoundary;
+import use_case.save_preferences.SavedPreferences;
 
 /**
  * Turns the result of saving or loading preferences into the state of the My profile page.
@@ -19,15 +19,20 @@ public class SavePreferencesPresenter implements SavePreferencesOutputBoundary {
     }
 
     @Override
-    public void presentSaved(AdopterPreferences preferences) {
+    public void presentSaved(SavedPreferences preferences) {
         final PreferencesState state = stateFor(preferences);
         state.setMessage("Your profile is saved.");
         publish(state);
     }
 
     @Override
-    public void presentLoaded(AdopterPreferences preferences) {
+    public void presentLoaded(SavedPreferences preferences) {
         publish(stateFor(preferences));
+    }
+
+    @Override
+    public void presentNothingSaved() {
+        publish(new PreferencesState());
     }
 
     @Override
@@ -37,15 +42,13 @@ public class SavePreferencesPresenter implements SavePreferencesOutputBoundary {
         publish(state);
     }
 
-    private PreferencesState stateFor(AdopterPreferences preferences) {
+    private PreferencesState stateFor(SavedPreferences preferences) {
         final PreferencesState state = new PreferencesState();
-        if (preferences != null) {
-            state.setHasChildren(preferences.hasChildren());
-            state.setHasOtherPets(preferences.hasOtherPets());
-            state.setCanHandleMedicalNeeds(preferences.canHandleMedicalNeeds());
-            state.setCanHandleKitten(preferences.canHandleKitten());
-            state.setCanHandlePregnantAnimal(preferences.canHandlePregnantAnimal());
-        }
+        state.setHasChildren(preferences.hasChildren());
+        state.setHasOtherPets(preferences.hasOtherPets());
+        state.setCanHandleMedicalNeeds(preferences.canHandleMedicalNeeds());
+        state.setCanHandleKitten(preferences.canHandleKitten());
+        state.setCanHandlePregnantAnimal(preferences.canHandlePregnantAnimal());
         return state;
     }
 
